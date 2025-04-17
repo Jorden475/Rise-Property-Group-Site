@@ -1,19 +1,325 @@
 [
   {
-    "id": "001",
-    "name": "MLK Retail Center",
-    "address": "2460 MLK Jr. Drive",
-    "city": "Atlanta",
+    "id": "retail-001",
+    "name": "2070 Candler Road",
+    "address": "2070 Candler Road",
+    "city": "Decatur",
     "state": "GA",
-    "zip": "30310",
-    "latitude": 33.7372,
-    "longitude": -84.4387,
-    "price": "$3,480,000",
-    "square_footage": "19,800 SF",
+    "zip": "30032",
+    "latitude": null,
+    "longitude": null,
+    "price": "500000",
+    "square_footage": "940 SF",
     "property_type": "Retail",
     "status": "Available",
-    "images": ["/images/property1.jpg"],
-    "brochure_url": "/brochures/property1.pdf",
-    "description": "High visibility retail center on MLK Jr. Drive."
+    "images": [
+      "/images/placeholder.jpg"
+    ],
+    "brochure_url": "",
+    "description": "| Single Tenant |  10 Year lease term |  8.67% Cap |  100% Occupied |  NOI $43,349 |  Built in 1963 | Zoning C1 |  0.93 Acres |  Rent bumps are 3% every nine years. |"
+  },
+  {
+    "id": "retail-002",
+    "name": "83961 AL-9",
+    "address": "83961 AL-9",
+    "city": "Ashland",
+    "state": "AL",
+    "zip": "36251",
+    "latitude": null,
+    "longitude": null,
+    "price": "Contact for Pricing",
+    "square_footage": "3893 SF",
+    "property_type": "Retail",
+    "status": "Available",
+    "images": [
+      "/images/placeholder.jpg"
+    ],
+    "brochure_url": "",
+    "description": "| Vacant |  1.41 Acre Lot |  Vacant |  Next to Clay Co Hospital |  In OZ |  200+ Feet of Frontage |  Former Hardee's |"
+  },
+  {
+    "id": "retail-003",
+    "name": "9320 The Landing Dr",
+    "address": "9320 The Landing Dr",
+    "city": "Douglasville",
+    "state": "GA",
+    "zip": "30135",
+    "latitude": null,
+    "longitude": null,
+    "price": "2818797",
+    "square_footage": "6810 SF",
+    "property_type": "Retail",
+    "status": "Available",
+    "images": [
+      "/images/placeholder.jpg"
+    ],
+    "brochure_url": "",
+    "description": "| Class B | Single Tenant |  6.4% Cap |  20% Increases on each 5-year Option |  Ground Lease | $180,403 NOI |  3 Lease options |  Built in 1999 |"
+  },
+  {
+    "id": "retail-004",
+    "name": "401 Cleveland Ave SW, Atlanta, GA, 30315",
+    "address": "401 Cleveland Ave SW, Atlanta, GA, 30315",
+    "city": "",
+    "state": "",
+    "zip": "",
+    "latitude": null,
+    "longitude": null,
+    "price": "400000",
+    "square_footage": "1294 SF",
+    "property_type": "Retail",
+    "status": "Available",
+    "images": [
+      "/images/placeholder.jpg"
+    ],
+    "brochure_url": "",
+    "description": "| Class C |  Single Tenant |  Fully Occupied |  NOI $42,596 |  10.65% Cap |  Built in 1950 |  Zoning C1 |  Eight parking Spaces |  9% Rent bumps every nine years. |  Same tenant for 15 years. |"
+  },
+  {
+    "id": "retail-005",
+    "name": "303 Highway 78 W",
+    "address": "303 Highway 78 W",
+    "city": "Jasper",
+    "state": "AL",
+    "zip": "35501",
+    "latitude": null,
+    "longitude": null,
+    "price": "Contact for Pricing",
+    "square_footage": "3183 SF",
+    "property_type": "Retail",
+    "status": "Available",
+    "images": [
+      "/images/placeholder.jpg"
+    ],
+    "brochure_url": "",
+    "description": "| Lot size 0.8 Acres |  Zoning B2 |"
+  },
+  {
+    "id": "retail-006",
+    "name": "3969 Lawrenceville Hwy, Tucker, GA 30084 Tucker Town Square",
+    "address": "3969 Lawrenceville Hwy, Tucker, GA 30084 Tucker Town Square",
+    "city": "",
+    "state": "",
+    "zip": "",
+    "latitude": null,
+    "longitude": null,
+    "price": "$8-$14/SF/YR",
+    "square_footage": "63245 SF",
+    "property_type": "Retail",
+    "status": "Available",
+    "images": [
+      "/images/placeholder.jpg"
+    ],
+    "brochure_url": "",
+    "description": "| Built in 1970 |  280 Parking spaces |  18 Building suites |  Zoning DT-2 |  7.35 Land acres |  Multi-tenant |"
+  },
+  {
+    "id": "retail-007",
+    "name": "2940 Johnson Ferry Rd",
+    "address": "2940 Johnson Ferry Rd",
+    "city": "Marietta",
+    "state": "GA",
+    "zip": "30062",
+    "latitude": null,
+    "longitude": null,
+    "price": "$17/Sq Ft/Yr",
+    "square_footage": "15000 SF",
+    "property_type": "Retail",
+    "status": "Available",
+    "images": [
+      "/images/placeholder.jpg"
+    ],
+    "brochure_url": "",
+    "description": "| Built in 1987 |  Single Tenant |  66 Parking Spaces |  Zoning C4 |  1.83 Land Acres |  Less than a mile from one of Marietta's retail hubs. |"
+  },
+  {
+    "id": "retail-008",
+    "name": "1140 University Dr NE",
+    "address": "1140 University Dr NE",
+    "city": "Atlanta",
+    "state": "GA",
+    "zip": "30306",
+    "latitude": null,
+    "longitude": null,
+    "price": "$16/SF/YR",
+    "square_footage": "7272 SF",
+    "property_type": "Retail",
+    "status": "Available",
+    "images": [
+      "/images/placeholder.jpg"
+    ],
+    "brochure_url": "",
+    "description": "| Built in 1990 |  0.45 Acre lot |  Zoning R4 |  2 Stories |  1 mile AHHI is $182k. |"
+  },
+  {
+    "id": "retail-009",
+    "name": "914 Market Pl Blvd",
+    "address": "914 Market Pl Blvd",
+    "city": "Cumming",
+    "state": "GA",
+    "zip": "30041",
+    "latitude": null,
+    "longitude": null,
+    "price": "$47/SF/YR",
+    "square_footage": "4500 SF",
+    "property_type": "Retail",
+    "status": "Available",
+    "images": [
+      "/images/placeholder.jpg"
+    ],
+    "brochure_url": "",
+    "description": "| Class A |  72 Parking Spaces |  Multi-Tenant |  1.26 Acre lot |  Built in 2016 |  19,100 VPD"
+  },
+  {
+    "id": "retail-010",
+    "name": "3451 Cobb Pkwy NW",
+    "address": "3451 Cobb Pkwy NW",
+    "city": "Acworth",
+    "state": "GA",
+    "zip": "30101",
+    "latitude": null,
+    "longitude": null,
+    "price": "Undisclosed",
+    "square_footage": "500-3,500 SF",
+    "property_type": "Retail",
+    "status": "Available",
+    "images": [
+      "/images/placeholder.jpg"
+    ],
+    "brochure_url": "",
+    "description": "| +/- 155 Parking spaces |  Zoning C4 |  2001/2006 |  4.3 Land acres |  42,083 VPD |"
+  },
+  {
+    "id": "retail-011",
+    "name": "2132 Campbellton Rd SW",
+    "address": "2132 Campbellton Rd SW",
+    "city": "Atlanta",
+    "state": "GA",
+    "zip": "30311",
+    "latitude": null,
+    "longitude": null,
+    "price": "$18/SF/YR\n\n",
+    "square_footage": "1000 SF",
+    "property_type": "Retail",
+    "status": "Available",
+    "images": [
+      "/images/placeholder.jpg"
+    ],
+    "brochure_url": "",
+    "description": "| 1998/2002 |  1.61 Land Acres |  Multi-tenant |  Zoning C1 |  15 minutes from Airport |  Billboard on the property. |"
+  },
+  {
+    "id": "retail-012",
+    "name": "2953 Cobb Pkwy N",
+    "address": "2953 Cobb Pkwy N",
+    "city": "Kennesaw",
+    "state": "GA",
+    "zip": "30152",
+    "latitude": null,
+    "longitude": null,
+    "price": "$15/SF/YR",
+    "square_footage": "2800 SF",
+    "property_type": "Retail",
+    "status": "Available",
+    "images": [
+      "/images/placeholder.jpg"
+    ],
+    "brochure_url": "",
+    "description": "| Built in 2007 |  2.91 Land acres |  +/- 146 Parking spaces |  Zoning HGB |  One drive-in door |  Excellent signange |  AKA Mack Dobbs Point |"
+  },
+  {
+    "id": "retail-013",
+    "name": "3900 Legacy Park Blvd",
+    "address": "3900 Legacy Park Blvd",
+    "city": "Kennesaw",
+    "state": "GA",
+    "zip": "30144",
+    "latitude": null,
+    "longitude": null,
+    "price": "$10 - $12/SF/YR",
+    "square_footage": "6502 SF",
+    "property_type": "Retail",
+    "status": "Available",
+    "images": [
+      "/images/placeholder.jpg"
+    ],
+    "brochure_url": "",
+    "description": "| 1998/2016 |  5 Buildings |  Zoning C |  105 Parking spaces |   +/- 20,000 VPD |  Overlooks Teem lake |"
+  },
+  {
+    "id": "retail-014",
+    "name": "1550 Hwy 138 SE",
+    "address": "1550 Hwy 138 SE",
+    "city": "Conyers",
+    "state": "GA",
+    "zip": "30013",
+    "latitude": null,
+    "longitude": null,
+    "price": "$36/SF/YR",
+    "square_footage": "2400 SF",
+    "property_type": "Retail",
+    "status": "Available",
+    "images": [
+      "/images/placeholder.jpg"
+    ],
+    "brochure_url": "",
+    "description": "| Class B |  +/- 170 Parking spaces |  Built in 2016 |  Zoning GV-UV |  42,000 VPD |  Strong tenant mix |  Easy access to I-20. |"
+  },
+  {
+    "id": "land-001",
+    "name": "2150 Cherry Road",
+    "address": "2150 Cherry Road",
+    "city": "",
+    "state": "",
+    "zip": "",
+    "latitude": null,
+    "longitude": null,
+    "price": "$1.8M",
+    "square_footage": "201247 SF",
+    "property_type": "Land",
+    "status": "Available",
+    "images": [
+      "/images/placeholder.jpg"
+    ],
+    "brochure_url": "",
+    "description": "| Located on Cherry Rd |  Surrounded by strong retailers such as Publix, Office, Depot,etc. |  Close to Winthrop University,Piedmont medical center, Etc. |"
+  },
+  {
+    "id": "land-002",
+    "name": "1047 Flat Shoals Rd SE",
+    "address": "1047 Flat Shoals Rd SE",
+    "city": "Conyers",
+    "state": "GA",
+    "zip": "30013",
+    "latitude": null,
+    "longitude": null,
+    "price": "$1.7M",
+    "square_footage": "348480 SF",
+    "property_type": "Land",
+    "status": "Available",
+    "images": [
+      "/images/placeholder.jpg"
+    ],
+    "brochure_url": "",
+    "description": "| Zoning GV-UV |  7.97 Acre Lot |  Former family entertainment center |  Motivated Seller |  55,000 VPD |  Immediate proximity to the areas main retail corridor |"
+  },
+  {
+    "id": "land-003",
+    "name": "517 Prominence Court",
+    "address": "517 Prominence Court",
+    "city": "Dawsonville",
+    "state": "GA",
+    "zip": "30534",
+    "latitude": null,
+    "longitude": null,
+    "price": "250000",
+    "square_footage": "0.44 build ready parcel for 8,500 SF Building SF",
+    "property_type": "Land",
+    "status": "Available",
+    "images": [
+      "/images/placeholder.jpg"
+    ],
+    "brochure_url": "",
+    "description": "| Build Ready |  0.44 Acre lot |  Zoning C-HB |"
   }
 ]
