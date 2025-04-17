@@ -1,0 +1,19 @@
+[
+  {
+    "id": "001",
+    "name": "MLK Retail Center",
+    "address": "2460 MLK Jr. Drive",
+    "city": "Atlanta",
+    "state": "GA",
+    "zip": "30310",
+    "latitude": 33.7372,
+    "longitude": -84.4387,
+    "price": "$3,480,000",
+    "square_footage": "19,800 SF",
+    "property_type": "Retail",
+    "status": "Available",
+    "images": ["/images/property1.jpg"],
+    "brochure_url": "/brochures/property1.pdf",
+    "description": "High visibility retail center on MLK Jr. Drive."
+  }
+]
