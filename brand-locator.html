@@ -586,9 +586,15 @@
         )
       );
 
+      const totalFound = allResults.reduce((s, r) => s + r.places.length, 0);
+      if (totalFound > 0) {
+        setStatus(`Found ${totalFound} location(s) — fetching driving times…`);
+        await enrichWithDrivingData(allResults, center);
+      }
+
       renderResults(allResults, center);
       renderLegend(allResults);
-      setStatus(`Done — found ${allResults.reduce((s, r) => s + r.places.length, 0)} location(s) across ${selectedBrands.length} brand(s).`);
+      setStatus(`Done — found ${totalFound} location(s) across ${selectedBrands.length} brand(s).`);
     } catch (err) {
       setStatus('Error: ' + err.message);
       console.error(err);
@@ -604,6 +610,39 @@
         else reject(new Error(`Could not geocode address (${status})`));
       });
     });
+  }
+
+  async function enrichWithDrivingData(allResults, center) {
+    const distService = new google.maps.DistanceMatrixService();
+
+    for (const result of allResults) {
+      const topPlaces = result.places.slice(0, 8);
+      if (topPlaces.length === 0) continue;
+
+      await new Promise(resolve => {
+        distService.getDistanceMatrix(
+          {
+            origins: [center],
+            destinations: topPlaces.map(p => p.geometry.location),
+            travelMode: google.maps.TravelMode.DRIVING,
+            unitSystem: google.maps.UnitSystem.IMPERIAL,
+          },
+          (response, status) => {
+            if (status === 'OK') {
+              const elements = response.rows[0].elements;
+              topPlaces.forEach((place, i) => {
+                const el = elements[i];
+                if (el.status === 'OK') {
+                  place.driveDistance = el.distance.text;
+                  place.driveTime = el.duration.text;
+                }
+              });
+            }
+            resolve();
+          }
+        );
+      });
+    }
   }
 
   function searchBrand(service, brand, center, radius, color) {
@@ -628,9 +667,10 @@
             });
 
             const infoWindow = new google.maps.InfoWindow({
-              content: `<div style="color:#111;font-size:13px;line-height:1.5;">
+              content: `<div style="color:#111;font-size:13px;line-height:1.6;">
                 <strong>${place.name}</strong><br/>
-                <span style="color:#555;">${place.vicinity || ''}</span>
+                <span style="color:#555;">${place.vicinity || ''}</span><br/>
+                ${place.driveTime ? `<span style="color:#b8860b;">🚗 ${place.driveTime} (${place.driveDistance})</span>` : ''}
               </div>`
             });
 
@@ -724,7 +764,11 @@
                 return `<div class="location-item">
                   <div class="location-name">${p.name}</div>
                   <div class="location-addr">${p.vicinity || ''}</div>
-                  <div class="location-dist">${miles} mi away</div>
+                  <div class="location-dist">
+                    ${p.driveTime
+                      ? `🚗 ${p.driveTime} &nbsp;·&nbsp; ${p.driveDistance}`
+                      : `${miles} mi away`}
+                  </div>
                 </div>`;
               }).join('')
           }
