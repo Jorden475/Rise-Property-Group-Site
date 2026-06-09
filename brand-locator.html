@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Brand Locator | Rise Property Group</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #0f0f0f;
+      color: #f0f0f0;
+      min-height: 100vh;
+    }
+
+    header {
+      background: #0f0f0f;
+      border-bottom: 1px solid #222;
+      padding: 18px 32px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    header .logo-text {
+      font-size: 1.4rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      color: #c9a84c;
+    }
+
+    header .logo-sub {
+      font-size: 0.75rem;
+      color: #888;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .container {
+      max-width: 1300px;
+      margin: 0 auto;
+      padding: 32px 24px;
+    }
+
+    h1 {
+      font-size: 1.6rem;
+      font-weight: 600;
+      color: #fff;
+      margin-bottom: 6px;
+    }
+
+    .subtitle {
+      color: #888;
+      font-size: 0.9rem;
+      margin-bottom: 28px;
+    }
+
+    .panel {
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      border-radius: 10px;
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+
+    .panel-title {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #c9a84c;
+      margin-bottom: 16px;
+      font-weight: 600;
+    }
+
+    label {
+      display: block;
+      font-size: 0.85rem;
+      color: #aaa;
+      margin-bottom: 6px;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 11px 14px;
+      background: #111;
+      border: 1px solid #333;
+      border-radius: 6px;
+      color: #f0f0f0;
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    input[type="text"]:focus {
+      border-color: #c9a84c;
+    }
+
+    /* Radius slider */
+    .slider-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-top: 16px;
+    }
+
+    .slider-row label {
+      margin: 0;
+      white-space: nowrap;
+      min-width: 120px;
+    }
+
+    input[type="range"] {
+      flex: 1;
+      accent-color: #c9a84c;
+    }
+
+    .slider-val {
+      min-width: 50px;
+      text-align: right;
+      color: #c9a84c;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    /* Brand selector */
+    .brand-search-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .brand-search-row input {
+      flex: 1;
+    }
+
+    .btn {
+      padding: 10px 20px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 600;
+      transition: background 0.2s, transform 0.1s;
+    }
+
+    .btn:active { transform: scale(0.97); }
+
+    .btn-gold {
+      background: #c9a84c;
+      color: #0f0f0f;
+    }
+
+    .btn-gold:hover { background: #debb65; }
+
+    .btn-outline {
+      background: transparent;
+      border: 1px solid #444;
+      color: #ccc;
+    }
+
+    .btn-outline:hover { border-color: #888; color: #fff; }
+
+    .btn-sm {
+      padding: 5px 10px;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+
+    /* Preset brands grid */
+    .preset-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .preset-chip {
+      padding: 6px 13px;
+      border-radius: 20px;
+      border: 1px solid #333;
+      background: #111;
+      color: #ccc;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.15s;
+      user-select: none;
+    }
+
+    .preset-chip:hover { border-color: #c9a84c; color: #c9a84c; }
+
+    .preset-chip.selected {
+      background: #c9a84c22;
+      border-color: #c9a84c;
+      color: #c9a84c;
+    }
+
+    /* Selected brands list */
+    .selected-brands {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      min-height: 36px;
+    }
+
+    .brand-tag {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 0.82rem;
+      font-weight: 500;
+      color: #fff;
+    }
+
+    .brand-tag .remove {
+      cursor: pointer;
+      opacity: 0.7;
+      font-size: 1rem;
+      line-height: 1;
+    }
+
+    .brand-tag .remove:hover { opacity: 1; }
+
+    /* Analyze button */
+    .analyze-row {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 8px;
+    }
+
+    .btn-analyze {
+      padding: 13px 36px;
+      font-size: 1rem;
+    }
+
+    /* Map */
+    #map {
+      width: 100%;
+      height: 520px;
+      border-radius: 10px;
+      border: 1px solid #2a2a2a;
+      background: #111;
+    }
+
+    .map-placeholder {
+      width: 100%;
+      height: 520px;
+      border-radius: 10px;
+      border: 1px solid #2a2a2a;
+      background: #111;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #444;
+      gap: 10px;
+    }
+
+    .map-placeholder svg { opacity: 0.3; }
+
+    /* Results */
+    #results-section { display: none; }
+
+    .results-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+      margin-top: 16px;
+    }
+
+    .brand-result-card {
+      background: #111;
+      border: 1px solid #2a2a2a;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .brand-result-header {
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .brand-result-name {
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+
+    .brand-count {
+      font-size: 0.8rem;
+      background: #ffffff18;
+      padding: 2px 9px;
+      border-radius: 10px;
+    }
+
+    .brand-result-list {
+      padding: 4px 0 10px;
+    }
+
+    .location-item {
+      padding: 8px 16px;
+      border-top: 1px solid #1e1e1e;
+      font-size: 0.82rem;
+    }
+
+    .location-name { color: #ddd; font-weight: 500; }
+    .location-addr { color: #666; margin-top: 2px; }
+    .location-dist { color: #c9a84c; font-size: 0.75rem; margin-top: 2px; }
+
+    /* Loading spinner */
+    .spinner {
+      display: none;
+      width: 22px;
+      height: 22px;
+      border: 2px solid #333;
+      border-top-color: #c9a84c;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .status-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 16px;
+      min-height: 28px;
+    }
+
+    .status-text { font-size: 0.85rem; color: #888; }
+
+    /* Legend */
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.8rem;
+      color: #bbb;
+    }
+
+    .legend-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
+
+    /* API key banner */
+    .api-banner {
+      background: #1a1200;
+      border: 1px solid #c9a84c44;
+      border-radius: 8px;
+      padding: 14px 18px;
+      font-size: 0.85rem;
+      color: #c9a84c;
+      margin-bottom: 24px;
+      line-height: 1.6;
+    }
+
+    .api-banner strong { color: #debb65; }
+    .api-banner a { color: #c9a84c; }
+
+    @media (max-width: 640px) {
+      .container { padding: 20px 16px; }
+      #map { height: 360px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="logo-text">RISE</div>
+    <div class="logo-sub">Property Group</div>
+  </div>
+</header>
+
+<div class="container">
+  <h1>Brand Proximity Checker</h1>
+  <p class="subtitle">Enter a property address and your client's brands to see all nearby locations at once.</p>
+
+  <!-- API Key Banner — remove once key is set -->
+  <div class="api-banner" id="api-banner">
+    <strong>Setup required:</strong> Replace <code>YOUR_API_KEY_HERE</code> at the bottom of this file with your Google Maps API key.
+    Get one at <a href="https://console.cloud.google.com/google/maps-apis/overview" target="_blank">console.cloud.google.com</a> —
+    enable <strong>Maps JavaScript API</strong> and <strong>Places API</strong>.
+  </div>
+
+  <!-- Address + Radius -->
+  <div class="panel">
+    <div class="panel-title">Property Address</div>
+    <label>Address to evaluate</label>
+    <input type="text" id="address-input" placeholder="e.g. 3969 Lawrenceville Hwy, Tucker, GA 30084" />
+    <div class="slider-row">
+      <label>Search radius</label>
+      <input type="range" id="radius-slider" min="1" max="10" step="0.5" value="3" oninput="updateRadius(this.value)" />
+      <span class="slider-val" id="radius-val">3 mi</span>
+    </div>
+  </div>
+
+  <!-- Brand Picker -->
+  <div class="panel">
+    <div class="panel-title">Client's Brands</div>
+
+    <p style="font-size:0.82rem;color:#666;margin-bottom:12px;">Click presets or type a custom brand name below.</p>
+
+    <div class="preset-grid" id="preset-grid">
+      <!-- Populated by JS -->
+    </div>
+
+    <div class="brand-search-row">
+      <input type="text" id="custom-brand-input" placeholder="Add custom brand (e.g. SuperChix)" onkeydown="handleCustomKey(event)" />
+      <button class="btn btn-outline" onclick="addCustomBrand()">Add</button>
+    </div>
+
+    <label style="margin-bottom:8px;">Selected brands</label>
+    <div class="selected-brands" id="selected-brands">
+      <span style="color:#444;font-size:0.82rem;align-self:center;">No brands selected yet.</span>
+    </div>
+  </div>
+
+  <!-- Run -->
+  <div class="analyze-row">
+    <button class="btn btn-gold btn-analyze" onclick="runAnalysis()">Analyze Location</button>
+  </div>
+
+  <div class="status-row">
+    <div class="spinner" id="spinner"></div>
+    <span class="status-text" id="status-text"></span>
+  </div>
+
+  <!-- Map -->
+  <div style="margin-top:20px;">
+    <div class="map-placeholder" id="map-placeholder">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
+        <circle cx="12" cy="9" r="2.5"/>
+      </svg>
+      <span>Map will appear here after analysis</span>
+    </div>
+    <div id="map" style="display:none;"></div>
+    <div class="legend" id="legend"></div>
+  </div>
+
+  <!-- Results -->
+  <div id="results-section">
+    <div class="panel" style="margin-top:24px;">
+      <div class="panel-title">Results by Brand</div>
+      <div class="results-grid" id="results-grid"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ─── Config ───────────────────────────────────────────────────────────────
+
+  const BRAND_COLORS = [
+    '#e05c5c', '#5c9fe0', '#5ce08a', '#e0b85c',
+    '#b05ce0', '#5ce0d6', '#e0755c', '#8fe05c',
+    '#e05ca8', '#5c6fe0'
+  ];
+
+  const PRESET_BRANDS = [
+    'Blaze Pizza', "Dunkin'", 'SuperChix', "McDonald's", 'Chick-fil-A',
+    'Starbucks', 'Subway', 'Chipotle', 'Raising Cane\'s', 'Shake Shack',
+    'Wingstop', 'Five Guys', 'Jersey Mike\'s', 'Panera Bread', 'Panda Express',
+    'Popeyes', 'Taco Bell', 'Wendy\'s', 'Burger King', 'Domino\'s',
+    'Papa John\'s', 'Pizza Hut', 'Little Caesars', 'Buffalo Wild Wings',
+    'Applebee\'s', 'IHOP', 'Denny\'s', 'Cracker Barrel', 'Olive Garden',
+  ];
+
+  // ─── State ────────────────────────────────────────────────────────────────
+
+  let selectedBrands = [];
+  let map = null;
+  let markers = [];
+  let centerMarker = null;
+  let radiusMiles = 3;
+
+  // ─── Init ─────────────────────────────────────────────────────────────────
+
+  function init() {
+    const grid = document.getElementById('preset-grid');
+    PRESET_BRANDS.forEach(brand => {
+      const chip = document.createElement('div');
+      chip.className = 'preset-chip';
+      chip.textContent = brand;
+      chip.dataset.brand = brand;
+      chip.onclick = () => togglePreset(chip, brand);
+      grid.appendChild(chip);
+    });
+  }
+
+  function updateRadius(val) {
+    radiusMiles = parseFloat(val);
+    document.getElementById('radius-val').textContent = `${val} mi`;
+  }
+
+  // ─── Brand management ────────────────────────────────────────────────────
+
+  function togglePreset(chip, brand) {
+    if (selectedBrands.includes(brand)) {
+      removeBrand(brand);
+    } else {
+      addBrand(brand);
+    }
+    renderSelectedBrands();
+    syncChips();
+  }
+
+  function addBrand(brand) {
+    const clean = brand.trim();
+    if (!clean || selectedBrands.includes(clean)) return;
+    selectedBrands.push(clean);
+    renderSelectedBrands();
+    syncChips();
+  }
+
+  function removeBrand(brand) {
+    selectedBrands = selectedBrands.filter(b => b !== brand);
+    renderSelectedBrands();
+    syncChips();
+  }
+
+  function addCustomBrand() {
+    const input = document.getElementById('custom-brand-input');
+    addBrand(input.value);
+    input.value = '';
+  }
+
+  function handleCustomKey(e) {
+    if (e.key === 'Enter') addCustomBrand();
+  }
+
+  function renderSelectedBrands() {
+    const container = document.getElementById('selected-brands');
+    if (selectedBrands.length === 0) {
+      container.innerHTML = '<span style="color:#444;font-size:0.82rem;align-self:center;">No brands selected yet.</span>';
+      return;
+    }
+    container.innerHTML = selectedBrands.map((brand, i) => {
+      const color = BRAND_COLORS[i % BRAND_COLORS.length];
+      return `<div class="brand-tag" style="background:${color}22;border:1px solid ${color}66;">
+        <span style="width:8px;height:8px;border-radius:50%;background:${color};flex-shrink:0;"></span>
+        <span>${brand}</span>
+        <span class="remove" onclick="removeBrand('${brand.replace(/'/g, "\\'")}')">×</span>
+      </div>`;
+    }).join('');
+  }
+
+  function syncChips() {
+    document.querySelectorAll('.preset-chip').forEach(chip => {
+      chip.classList.toggle('selected', selectedBrands.includes(chip.dataset.brand));
+    });
+  }
+
+  // ─── Analysis ────────────────────────────────────────────────────────────
+
+  async function runAnalysis() {
+    const address = document.getElementById('address-input').value.trim();
+    if (!address) { setStatus('Please enter an address.'); return; }
+    if (selectedBrands.length === 0) { setStatus('Please select at least one brand.'); return; }
+
+    setStatus('Geocoding address…');
+    showSpinner(true);
+
+    try {
+      const geocoder = new google.maps.Geocoder();
+      const geoResult = await geocodeAddress(geocoder, address);
+      const center = geoResult.geometry.location;
+
+      initMap(center);
+      placeCenter(center, address);
+
+      setStatus(`Searching for ${selectedBrands.length} brand(s) within ${radiusMiles} mile(s)…`);
+
+      const service = new google.maps.places.PlacesService(map);
+      const radiusMeters = Math.round(radiusMiles * 1609.34);
+
+      const allResults = await Promise.all(
+        selectedBrands.map((brand, i) =>
+          searchBrand(service, brand, center, radiusMeters, BRAND_COLORS[i % BRAND_COLORS.length])
+        )
+      );
+
+      renderResults(allResults, center);
+      renderLegend(allResults);
+      setStatus(`Done — found ${allResults.reduce((s, r) => s + r.places.length, 0)} location(s) across ${selectedBrands.length} brand(s).`);
+    } catch (err) {
+      setStatus('Error: ' + err.message);
+      console.error(err);
+    } finally {
+      showSpinner(false);
+    }
+  }
+
+  function geocodeAddress(geocoder, address) {
+    return new Promise((resolve, reject) => {
+      geocoder.geocode({ address }, (results, status) => {
+        if (status === 'OK' && results.length > 0) resolve(results[0]);
+        else reject(new Error(`Could not geocode address (${status})`));
+      });
+    });
+  }
+
+  function searchBrand(service, brand, center, radius, color) {
+    return new Promise(resolve => {
+      service.nearbySearch(
+        { location: center, radius, keyword: brand, type: 'establishment' },
+        (results, status) => {
+          const places = (status === google.maps.places.PlacesServiceStatus.OK) ? results : [];
+          places.forEach(place => {
+            const marker = new google.maps.Marker({
+              map,
+              position: place.geometry.location,
+              title: place.name,
+              icon: {
+                path: google.maps.SymbolPath.CIRCLE,
+                scale: 9,
+                fillColor: color,
+                fillOpacity: 0.95,
+                strokeColor: '#fff',
+                strokeWeight: 1.5,
+              }
+            });
+
+            const infoWindow = new google.maps.InfoWindow({
+              content: `<div style="color:#111;font-size:13px;line-height:1.5;">
+                <strong>${place.name}</strong><br/>
+                <span style="color:#555;">${place.vicinity || ''}</span>
+              </div>`
+            });
+
+            marker.addListener('click', () => infoWindow.open(map, marker));
+            markers.push(marker);
+          });
+
+          resolve({ brand, color, places });
+        }
+      );
+    });
+  }
+
+  function initMap(center) {
+    clearMarkers();
+
+    document.getElementById('map-placeholder').style.display = 'none';
+    const mapEl = document.getElementById('map');
+    mapEl.style.display = 'block';
+
+    map = new google.maps.Map(mapEl, {
+      center,
+      zoom: 13,
+      styles: darkMapStyle(),
+      disableDefaultUI: false,
+    });
+  }
+
+  function placeCenter(center, address) {
+    if (centerMarker) centerMarker.setMap(null);
+    centerMarker = new google.maps.Marker({
+      map,
+      position: center,
+      title: address,
+      icon: {
+        path: google.maps.SymbolPath.BACKWARD_CLOSED_ARROW,
+        scale: 7,
+        fillColor: '#c9a84c',
+        fillOpacity: 1,
+        strokeColor: '#fff',
+        strokeWeight: 2,
+      },
+      zIndex: 999,
+    });
+
+    // Draw radius circle
+    new google.maps.Circle({
+      map,
+      center,
+      radius: radiusMiles * 1609.34,
+      strokeColor: '#c9a84c',
+      strokeOpacity: 0.4,
+      strokeWeight: 1,
+      fillColor: '#c9a84c',
+      fillOpacity: 0.04,
+    });
+  }
+
+  function clearMarkers() {
+    markers.forEach(m => m.setMap(null));
+    markers = [];
+  }
+
+  function renderResults(allResults, center) {
+    const section = document.getElementById('results-section');
+    const grid = document.getElementById('results-grid');
+    section.style.display = 'block';
+    grid.innerHTML = '';
+
+    allResults.forEach(({ brand, color, places }) => {
+      const card = document.createElement('div');
+      card.className = 'brand-result-card';
+
+      const sortedPlaces = [...places].sort((a, b) => {
+        const distA = google.maps.geometry.spherical.computeDistanceBetween(center, a.geometry.location);
+        const distB = google.maps.geometry.spherical.computeDistanceBetween(center, b.geometry.location);
+        return distA - distB;
+      });
+
+      card.innerHTML = `
+        <div class="brand-result-header" style="background:${color}22;border-bottom:1px solid ${color}44;">
+          <span class="brand-result-name" style="color:${color};">${brand}</span>
+          <span class="brand-count">${places.length} found</span>
+        </div>
+        <div class="brand-result-list">
+          ${sortedPlaces.length === 0
+            ? '<div class="location-item" style="color:#555;">No locations found within radius.</div>'
+            : sortedPlaces.slice(0, 8).map(p => {
+                const dist = google.maps.geometry.spherical.computeDistanceBetween(center, p.geometry.location);
+                const miles = (dist / 1609.34).toFixed(1);
+                return `<div class="location-item">
+                  <div class="location-name">${p.name}</div>
+                  <div class="location-addr">${p.vicinity || ''}</div>
+                  <div class="location-dist">${miles} mi away</div>
+                </div>`;
+              }).join('')
+          }
+          ${sortedPlaces.length > 8 ? `<div class="location-item" style="color:#555;">+${sortedPlaces.length - 8} more — see map</div>` : ''}
+        </div>
+      `;
+      grid.appendChild(card);
+    });
+  }
+
+  function renderLegend(allResults) {
+    const legend = document.getElementById('legend');
+    legend.innerHTML = allResults.map(({ brand, color }) =>
+      `<div class="legend-item">
+        <div class="legend-dot" style="background:${color};"></div>
+        <span>${brand}</span>
+      </div>`
+    ).join('') + `<div class="legend-item">
+      <div class="legend-dot" style="background:#c9a84c;border-radius:2px;transform:rotate(45deg);"></div>
+      <span>Subject Property</span>
+    </div>`;
+  }
+
+  function setStatus(msg) {
+    document.getElementById('status-text').textContent = msg;
+  }
+
+  function showSpinner(on) {
+    document.getElementById('spinner').style.display = on ? 'block' : 'none';
+  }
+
+  // ─── Dark map style ───────────────────────────────────────────────────────
+
+  function darkMapStyle() {
+    return [
+      { elementType: 'geometry', stylers: [{ color: '#1a1a2e' }] },
+      { elementType: 'labels.text.fill', stylers: [{ color: '#8891a5' }] },
+      { elementType: 'labels.text.stroke', stylers: [{ color: '#1a1a2e' }] },
+      { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#2d2d44' }] },
+      { featureType: 'road.arterial', elementType: 'geometry', stylers: [{ color: '#38384f' }] },
+      { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#484860' }] },
+      { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#0d1b2a' }] },
+      { featureType: 'poi', elementType: 'geometry', stylers: [{ color: '#202035' }] },
+      { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#1a2e1a' }] },
+      { featureType: 'transit', elementType: 'geometry', stylers: [{ color: '#1e1e30' }] },
+    ];
+  }
+
+  init();
+</script>
+
+<!--
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  SETUP: Replace YOUR_API_KEY_HERE with your Google Maps key  ║
+  ║  Required APIs: Maps JavaScript API + Places API             ║
+  ║  Get key at: console.cloud.google.com                        ║
+  ╚══════════════════════════════════════════════════════════════╝
+-->
+<script
+  src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY_HERE&libraries=places,geometry&callback=Function.prototype"
+  async defer>
+</script>
+
+</body>
+</html>
