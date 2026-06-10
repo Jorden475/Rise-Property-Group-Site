@@ -58,6 +58,28 @@ const BRAND_COLORS = [
 const RADII = [0.5, 1, 2, 3, 5];
 const M_PER_MILE = 1609.34;
 
+// Strict name matching — nearby search is fuzzy, so only keep results whose
+// name actually contains the brand (ignoring punctuation/case). Aliases cover
+// common naming differences between the brand label and Google's listing name.
+const BRAND_ALIASES = {
+  'dunkin donuts': ['dunkin'],
+  'chase bank': ['chase'],
+  'nothing bundt cakes': ['nothing bundt'],
+  'crumbl': ['crumbl cookies'],
+  'superchix': ['super chix'],
+};
+
+function normalize(s) {
+  return s.toLowerCase().replace(/[^a-z0-9 ]/g, '').replace(/\s+/g, ' ').trim();
+}
+
+function matchesBrand(placeName, brand) {
+  const name = normalize(placeName);
+  const b = normalize(brand);
+  if (name.includes(b)) return true;
+  return (BRAND_ALIASES[b] || []).some((alias) => name.includes(normalize(alias)));
+}
+
 function brandColor(brand, allBrands) {
   const idx = allBrands.indexOf(brand);
   return BRAND_COLORS[(idx >= 0 ? idx : 0) % BRAND_COLORS.length];
@@ -189,6 +211,7 @@ function App() {
           service.nearbySearch({ location: center, radius: radiusM, keyword: brand }, (places, st) => {
             const ok = st === google.maps.places.PlacesServiceStatus.OK;
             const list = (ok ? places : [])
+              .filter((p) => matchesBrand(p.name, brand))
               .map((p) => {
                 const dist = google.maps.geometry.spherical.computeDistanceBetween(center, p.geometry.location);
                 return {
