@@ -116,6 +116,32 @@ async function placesAutocomplete(input) {
     .filter(Boolean);
 }
 
+// Routes API — real driving distance/time from the subject to each found location.
+async function driveMatrix(lat, lng, places) {
+  if (places.length === 0) return;
+  const resp = await fetch('https://routes.googleapis.com/distanceMatrix/v2:computeRouteMatrix', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Goog-Api-Key': GMAPS_KEY,
+      'X-Goog-FieldMask': 'originIndex,destinationIndex,distanceMeters,duration,condition',
+    },
+    body: JSON.stringify({
+      origins: [{ waypoint: { location: { latLng: { latitude: lat, longitude: lng } } } }],
+      destinations: places.map((p) => ({ waypoint: { location: { latLng: { latitude: p.lat, longitude: p.lng } } } })),
+      travelMode: 'DRIVE',
+    }),
+  });
+  if (!resp.ok) return;
+  const rows = await resp.json();
+  rows.forEach((r) => {
+    if (r.condition === 'ROUTE_EXISTS' && places[r.destinationIndex]) {
+      places[r.destinationIndex].driveMi = r.distanceMeters / M_PER_MILE;
+      places[r.destinationIndex].driveMin = Math.round(parseInt(r.duration) / 60);
+    }
+  });
+}
+
 function brandColor(brand, allBrands) {
   const idx = allBrands.indexOf(brand);
   return BRAND_COLORS[(idx >= 0 ? idx : 0) % BRAND_COLORS.length];
@@ -285,6 +311,11 @@ function App() {
       });
 
       const raw = await Promise.all(searches);
+
+      setStatus('Calculating driving distances…');
+      await Promise.all(raw.map((r) => driveMatrix(center.lat(), center.lng(), r.places)));
+      raw.forEach((r) => r.places.sort((a, b) => (a.driveMi ?? a.distMi) - (b.driveMi ?? b.distMi)));
+
       const final = raw.map((r) => ({ ...r, color: brandColor(r.brand, allBrandList) }));
 
       // Drop pins
@@ -306,7 +337,10 @@ function App() {
               '<div style="font-weight:700;color:' + color + ';font-size:13px;">' + brand + '</div>' +
               '<div style="font-weight:600;color:#1B2A4A;font-size:13px;">' + p.name + '</div>' +
               '<div style="color:#666;font-size:12px;">' + p.vicinity + '</div>' +
-              '<div style="color:#C9A84C;font-size:12px;font-weight:600;margin-top:4px;">' + p.distMi.toFixed(2) + ' mi from subject</div>' +
+              '<div style="color:#C9A84C;font-size:12px;font-weight:600;margin-top:4px;">' +
+              (p.driveMi != null
+                ? p.driveMi.toFixed(2) + ' mi drive (' + p.driveMin + ' min) from subject'
+                : p.distMi.toFixed(2) + ' mi from subject') + '</div>' +
               '</div>',
           });
           marker.addListener('click', () => iw.open(map, marker));
@@ -326,10 +360,10 @@ function App() {
 
   const exportCSV = () => {
     if (!results) return;
-    const rows = [['Brand', 'Address', 'Distance from Subject (mi)', 'Phone']];
+    const rows = [['Brand', 'Address', 'Drive Distance from Subject (mi)', 'Drive Time (min)', 'Phone']];
     results.forEach(({ brand, places }) =>
       places.forEach((p) =>
-        rows.push([brand, (p.name + ' — ' + p.vicinity), p.distMi.toFixed(2), p.phone || ''])
+        rows.push([brand, (p.name + ' — ' + p.vicinity), (p.driveMi ?? p.distMi).toFixed(2), p.driveMin ?? '', p.phone || ''])
       )
     );
     const csv = rows.map((r) => r.map((c) => '"' + String(c).replace(/"/g, '""') + '"').join(',')).join('\n');
@@ -521,7 +555,9 @@ function App() {
                     <div key={i} className="pl-4 py-1.5 border-l-2 ml-1" style={{ borderColor: color + '55' }}>
                       <div className="text-[13px] font-medium text-gray-800">{p.name}</div>
                       <div className="text-xs text-gray-500">{p.vicinity}</div>
-                      <div className="text-xs font-semibold" style={{ color }}>{p.distMi.toFixed(2)} mi</div>
+                      <div className="text-xs font-semibold" style={{ color }}>
+                        {p.driveMi != null ? p.driveMi.toFixed(2) + ' mi drive · ' + p.driveMin + ' min' : p.distMi.toFixed(2) + ' mi'}
+                      </div>
                     </div>
                   ))
                 )}
