@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ProximityIQ — Location Intelligence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          navy: '#1B2A4A',
+          gold: '#C9A84C',
+        },
+        fontFamily: {
+          sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+        },
+      },
+    },
+  };
+</script>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+  body { font-family: 'Plus Jakarta Sans', sans-serif; }
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: #f1f1f1; }
+  ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+</style>
+</head>
+<body class="bg-gray-50">
+<div id="root"></div>
+
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useRef, useCallback } = React;
+
+// ─── Brand presets ──────────────────────────────────────────────────────────
+const PRESET_BRANDS = [
+  'SuperChix', 'Dunkin Donuts', 'IHOP', 'Popeyes', "McDonald's", 'Chick-fil-A',
+  'Blaze Pizza', 'Checkers', "Jimmy John's", 'Drybar', 'BurgerFi',
+  'Nothing Bundt Cakes', 'Starbucks', 'Chipotle', 'Crumbl', 'Dutch Bros',
+  'Swig', "Chili's", "Applebee's", 'Panera Bread', 'Subway', 'Panda Express',
+  "Raising Cane's", 'Wingstop', 'Five Guys', 'Shake Shack', 'Planet Fitness',
+  'Anytime Fitness', 'CVS', 'Walgreens', 'Publix', 'Kroger', 'Target',
+  'Walmart', 'Chase Bank', 'Wells Fargo',
+];
+
+const BRAND_COLORS = [
+  '#E63946', '#2A9D8F', '#E76F51', '#264653', '#F4A261', '#6A4C93',
+  '#1982C4', '#8AC926', '#FF595E', '#3A86FF', '#FB5607', '#7209B7',
+  '#06A77D', '#D62828', '#003049', '#F77F00', '#5F0F40', '#0F4C5C',
+];
+
+const RADII = [0.5, 1, 2, 3, 5];
+const M_PER_MILE = 1609.34;
+
+function brandColor(brand, allBrands) {
+  const idx = allBrands.indexOf(brand);
+  return BRAND_COLORS[(idx >= 0 ? idx : 0) % BRAND_COLORS.length];
+}
+
+// ─── App ────────────────────────────────────────────────────────────────────
+function App() {
+  const [address, setAddress] = useState('');
+  const [radius, setRadius] = useState(2);
+  const [selected, setSelected] = useState([]);
+  const [customBrands, setCustomBrands] = useState([]);
+  const [customInput, setCustomInput] = useState('');
+  const [filter, setFilter] = useState('');
+  const [results, setResults] = useState(null); // [{brand,color,places:[{name,vicinity,distMi,phone,lat,lng}]}]
+  const [status, setStatus] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [subject, setSubject] = useState(null);
+
+  const mapRef = useRef(null);
+  const mapObj = useRef(null);
+  const markersRef = useRef([]);
+  const circleRef = useRef(null);
+  const subjectMarkerRef = useRef(null);
+
+  const allBrandList = [...PRESET_BRANDS, ...customBrands];
+
+  // Initialize map once Google loads
+  useEffect(() => {
+    const t = setInterval(() => {
+      if (window.google && mapRef.current && !mapObj.current) {
+        mapObj.current = new google.maps.Map(mapRef.current, {
+          center: { lat: 33.749, lng: -84.388 }, // Atlanta default
+          zoom: 11,
+          mapTypeControl: false,
+          streetViewControl: false,
+          fullscreenControl: true,
+        });
+        clearInterval(t);
+      }
+    }, 200);
+    return () => clearInterval(t);
+  }, []);
+
+  const toggleBrand = (b) =>
+    setSelected((s) => (s.includes(b) ? s.filter((x) => x !== b) : [...s, b]));
+
+  const addCustom = () => {
+    const v = customInput.trim();
+    if (!v) return;
+    if (!customBrands.includes(v) && !PRESET_BRANDS.includes(v)) {
+      setCustomBrands((c) => [...c, v]);
+    }
+    if (!selected.includes(v)) setSelected((s) => [...s, v]);
+    setCustomInput('');
+  };
+
+  const clearMarkers = () => {
+    markersRef.current.forEach((m) => m.setMap(null));
+    markersRef.current = [];
+    if (circleRef.current) { circleRef.current.setMap(null); circleRef.current = null; }
+    if (subjectMarkerRef.current) { subjectMarkerRef.current.setMap(null); subjectMarkerRef.current = null; }
+  };
+
+  const analyze = async () => {
+    if (!address.trim()) { setStatus('Enter a subject property address.'); return; }
+    if (selected.length === 0) { setStatus('Select at least one brand.'); return; }
+    if (!window.google || !mapObj.current) { setStatus('Map is still loading — try again in a second.'); return; }
+
+    setLoading(true);
+    setStatus('Geocoding address…');
+    setResults(null);
+    clearMarkers();
+
+    try {
+      const geocoder = new google.maps.Geocoder();
+      const geo = await new Promise((res, rej) =>
+        geocoder.geocode({ address }, (r, s) =>
+          s === 'OK' && r.length ? res(r[0]) : rej(new Error('Address not found (' + s + ')'))
+        )
+      );
+      const center = geo.geometry.location;
+      setSubject({ address: geo.formatted_address, lat: center.lat(), lng: center.lng() });
+
+      const map = mapObj.current;
+      map.setCenter(center);
+      map.setZoom(radius <= 1 ? 14 : radius <= 3 ? 13 : 12);
+
+      // Subject property — gold star
+      const subjectInfo = new google.maps.InfoWindow({
+        content:
+          '<div style="font-family:\'Plus Jakarta Sans\',sans-serif;min-width:220px;">' +
+          '<div style="font-weight:700;color:#1B2A4A;font-size:14px;margin-bottom:4px;">Subject Property</div>' +
+          '<div style="color:#555;font-size:12px;margin-bottom:8px;">' + geo.formatted_address + '</div>' +
+          '<div style="border-top:1px solid #eee;padding-top:8px;font-size:12px;">' +
+          '<span style="color:#888;">Traffic Count:</span> ' +
+          '<span style="color:#C9A84C;font-weight:600;cursor:pointer;" onclick="alert(\'Traffic data integration coming soon.\')">Request traffic data</span>' +
+          '</div></div>',
+      });
+      // NOTE: Traffic count API call goes here.
+      // When ready, replace the "Request traffic data" placeholder above with a call to
+      // StreetLight, TomTom Traffic Stats, HERE, or the Georgia DOT (GDOT) AADT endpoint,
+      // passing { lat: center.lat(), lng: center.lng() } and rendering the returned AADT/VPD value.
+      const star = {
+        path: 'M 0,-12 L 3.5,-3.7 12,-3.7 5,1.5 7.6,10 0,4.9 -7.6,10 -5,1.5 -12,-3.7 -3.5,-3.7 Z',
+        fillColor: '#C9A84C',
+        fillOpacity: 1,
+        strokeColor: '#1B2A4A',
+        strokeWeight: 1.5,
+        scale: 1.4,
+      };
+      subjectMarkerRef.current = new google.maps.Marker({
+        map, position: center, icon: star, zIndex: 1000, title: 'Subject Property',
+      });
+      subjectMarkerRef.current.addListener('click', () => subjectInfo.open(map, subjectMarkerRef.current));
+
+      // Radius ring
+      circleRef.current = new google.maps.Circle({
+        map, center, radius: radius * M_PER_MILE,
+        strokeColor: '#1B2A4A', strokeOpacity: 0.35, strokeWeight: 1.5,
+        fillColor: '#1B2A4A', fillOpacity: 0.04,
+      });
+
+      setStatus('Searching ' + selected.length + ' brand(s) within ' + radius + ' mi…');
+      const service = new google.maps.places.PlacesService(map);
+      const radiusM = Math.round(radius * M_PER_MILE);
+
+      const searches = selected.map((brand) =>
+        new Promise((resolve) => {
+          service.nearbySearch({ location: center, radius: radiusM, keyword: brand }, (places, st) => {
+            const ok = st === google.maps.places.PlacesServiceStatus.OK;
+            const list = (ok ? places : [])
+              .map((p) => {
+                const dist = google.maps.geometry.spherical.computeDistanceBetween(center, p.geometry.location);
+                return {
+                  name: p.name,
+                  vicinity: p.vicinity || '',
+                  distMi: dist / M_PER_MILE,
+                  lat: p.geometry.location.lat(),
+                  lng: p.geometry.location.lng(),
+                  phone: '', // Nearby Search does not return phone; available via Place Details if needed
+                };
+              })
+              .filter((p) => p.distMi <= radius)
+              .sort((a, b) => a.distMi - b.distMi);
+            resolve({ brand, places: list });
+          });
+        })
+      );
+
+      const raw = await Promise.all(searches);
+      const final = raw.map((r) => ({ ...r, color: brandColor(r.brand, allBrandList) }));
+
+      // Drop pins
+      final.forEach(({ brand, color, places }) => {
+        places.forEach((p) => {
+          const marker = new google.maps.Marker({
+            map,
+            position: { lat: p.lat, lng: p.lng },
+            title: p.name,
+            icon: {
+              path: google.maps.SymbolPath.CIRCLE,
+              scale: 8, fillColor: color, fillOpacity: 0.95,
+              strokeColor: '#fff', strokeWeight: 2,
+            },
+          });
+          const iw = new google.maps.InfoWindow({
+            content:
+              '<div style="font-family:\'Plus Jakarta Sans\',sans-serif;min-width:180px;">' +
+              '<div style="font-weight:700;color:' + color + ';font-size:13px;">' + brand + '</div>' +
+              '<div style="font-weight:600;color:#1B2A4A;font-size:13px;">' + p.name + '</div>' +
+              '<div style="color:#666;font-size:12px;">' + p.vicinity + '</div>' +
+              '<div style="color:#C9A84C;font-size:12px;font-weight:600;margin-top:4px;">' + p.distMi.toFixed(2) + ' mi from subject</div>' +
+              '</div>',
+          });
+          marker.addListener('click', () => iw.open(map, marker));
+          markersRef.current.push(marker);
+        });
+      });
+
+      setResults(final);
+      const total = final.reduce((s, r) => s + r.places.length, 0);
+      setStatus('Found ' + total + ' location(s) across ' + selected.length + ' brand(s).');
+    } catch (e) {
+      setStatus('Error: ' + e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const exportCSV = () => {
+    if (!results) return;
+    const rows = [['Brand', 'Address', 'Distance from Subject (mi)', 'Phone']];
+    results.forEach(({ brand, places }) =>
+      places.forEach((p) =>
+        rows.push([brand, (p.name + ' — ' + p.vicinity), p.distMi.toFixed(2), p.phone || ''])
+      )
+    );
+    const csv = rows.map((r) => r.map((c) => '"' + String(c).replace(/"/g, '""') + '"').join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'proximityiq-results.csv';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+
+  const visiblePresets = PRESET_BRANDS.filter((b) =>
+    b.toLowerCase().includes(filter.toLowerCase())
+  );
+
+  const totalFound = results ? results.reduce((s, r) => s + r.places.length, 0) : 0;
+
+  return (
+    <div className="h-screen flex flex-col">
+      {/* ── Top bar ── */}
+      <header className="bg-white border-b border-gray-200 shadow-sm px-4 md:px-6 py-3 flex flex-col md:flex-row md:items-center gap-3 z-10">
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="w-9 h-9 rounded-lg bg-navy flex items-center justify-center">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C9A84C" strokeWidth="2.2">
+              <path d="M12 21s-7-5.5-7-11a7 7 0 0 1 14 0c0 5.5-7 11-7 11z"/>
+              <circle cx="12" cy="10" r="2.5"/>
+            </svg>
+          </div>
+          <div>
+            <span className="font-extrabold text-navy text-lg tracking-tight">Proximity<span className="text-gold">IQ</span></span>
+            <div className="text-[10px] text-gray-400 -mt-1 tracking-wide uppercase">Location Intelligence</div>
+          </div>
+        </div>
+
+        <div className="flex-1 flex flex-col sm:flex-row gap-2">
+          <input
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && analyze()}
+            placeholder="Enter subject property address…"
+            className="flex-1 px-4 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy"
+          />
+          <select
+            value={radius}
+            onChange={(e) => setRadius(parseFloat(e.target.value))}
+            className="px-3 py-2.5 rounded-lg border border-gray-300 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-navy/30"
+          >
+            {RADII.map((r) => <option key={r} value={r}>{r} mi radius</option>)}
+          </select>
+          <button
+            onClick={analyze}
+            disabled={loading}
+            className="px-6 py-2.5 rounded-lg bg-navy text-white text-sm font-semibold hover:bg-navy/90 transition disabled:opacity-50 shrink-0"
+          >
+            {loading ? 'Searching…' : 'Search'}
+          </button>
+        </div>
+      </header>
+
+      {/* ── Body ── */}
+      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+        {/* Sidebar */}
+        <aside className="w-full lg:w-[420px] xl:w-[460px] bg-gray-50 border-r border-gray-200 flex flex-col overflow-y-auto order-2 lg:order-1">
+          {/* Brand selection card */}
+          <div className="m-4 bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-bold text-navy uppercase tracking-wide">Brands</h2>
+              <span className="text-xs text-gray-400">{selected.length} selected</span>
+            </div>
+
+            <input
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              placeholder="Filter preset brands…"
+              className="w-full mb-3 px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-navy/20"
+            />
+
+            <div className="flex flex-wrap gap-1.5 mb-4 max-h-48 overflow-y-auto">
+              {visiblePresets.map((b) => {
+                const on = selected.includes(b);
+                return (
+                  <button
+                    key={b}
+                    onClick={() => toggleBrand(b)}
+                    className={
+                      'px-3 py-1.5 rounded-full text-xs font-medium border transition ' +
+                      (on
+                        ? 'bg-navy text-white border-navy'
+                        : 'bg-white text-gray-600 border-gray-200 hover:border-navy/40')
+                    }
+                  >
+                    {b}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="flex gap-2">
+              <input
+                value={customInput}
+                onChange={(e) => setCustomInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && addCustom()}
+                placeholder="Add any brand (e.g. Torchy's Tacos)"
+                className="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-gold/40"
+              />
+              <button
+                onClick={addCustom}
+                className="px-4 py-2 rounded-lg bg-gold text-white text-sm font-semibold hover:bg-gold/90 transition"
+              >
+                Add
+              </button>
+            </div>
+
+            {customBrands.length > 0 && (
+              <div className="mt-3">
+                <div className="text-[11px] text-gray-400 uppercase tracking-wide mb-1.5">Custom brands</div>
+                <div className="flex flex-wrap gap-1.5">
+                  {customBrands.map((b) => {
+                    const on = selected.includes(b);
+                    return (
+                      <button
+                        key={b}
+                        onClick={() => toggleBrand(b)}
+                        className={
+                          'px-3 py-1.5 rounded-full text-xs font-medium border transition ' +
+                          (on
+                            ? 'bg-gold text-white border-gold'
+                            : 'bg-white text-gray-600 border-gray-200 hover:border-gold/60')
+                        }
+                      >
+                        {b}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Results card */}
+          <div className="mx-4 mb-4 bg-white rounded-xl shadow-sm border border-gray-100 p-5 flex-1">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-bold text-navy uppercase tracking-wide">Results</h2>
+              {results && totalFound > 0 && (
+                <button
+                  onClick={exportCSV}
+                  className="px-3 py-1.5 rounded-lg border border-navy text-navy text-xs font-semibold hover:bg-navy hover:text-white transition"
+                >
+                  Export Results
+                </button>
+              )}
+            </div>
+
+            {status && <div className="text-xs text-gray-500 mb-3">{status}</div>}
+
+            {!results && !loading && (
+              <div className="text-sm text-gray-400 py-8 text-center">
+                Enter an address and select brands to see nearby locations.
+              </div>
+            )}
+
+            {results && results.map(({ brand, color, places }) => (
+              <div key={brand} className="mb-4">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full" style={{ background: color }}></span>
+                  <span className="text-sm font-bold text-navy">{brand}</span>
+                  <span className="text-xs text-gray-400">({places.length})</span>
+                </div>
+                {places.length === 0 ? (
+                  <div className="text-xs text-gray-400 pl-4">None within {radius} mi</div>
+                ) : (
+                  places.map((p, i) => (
+                    <div key={i} className="pl-4 py-1.5 border-l-2 ml-1" style={{ borderColor: color + '55' }}>
+                      <div className="text-[13px] font-medium text-gray-800">{p.name}</div>
+                      <div className="text-xs text-gray-500">{p.vicinity}</div>
+                      <div className="text-xs font-semibold" style={{ color }}>{p.distMi.toFixed(2)} mi</div>
+                    </div>
+                  ))
+                )}
+              </div>
+            ))}
+          </div>
+        </aside>
+
+        {/* Map */}
+        <main className="flex-1 order-1 lg:order-2 min-h-[320px]">
+          <div ref={mapRef} className="w-full h-full" />
+        </main>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+
+<script
+  src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB0puwiTrUIPbynApnT9wov6-ktyB83zho&libraries=places,geometry&callback=Function.prototype"
+  async defer>
+</script>
+</body>
+</html>
