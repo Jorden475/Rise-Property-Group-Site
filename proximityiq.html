@@ -99,6 +99,7 @@ function App() {
   const [subject, setSubject] = useState(null);
 
   const mapRef = useRef(null);
+  const addressInputRef = useRef(null);
   const mapObj = useRef(null);
   const markersRef = useRef([]);
   const circleRef = useRef(null);
@@ -117,6 +118,17 @@ function App() {
           streetViewControl: false,
           fullscreenControl: true,
         });
+        // Address autocomplete on the top-bar input
+        if (addressInputRef.current) {
+          const ac = new google.maps.places.Autocomplete(addressInputRef.current, {
+            fields: ['formatted_address', 'geometry'],
+            componentRestrictions: { country: 'us' },
+          });
+          ac.addListener('place_changed', () => {
+            const place = ac.getPlace();
+            if (place && place.formatted_address) setAddress(place.formatted_address);
+          });
+        }
         clearInterval(t);
       }
     }, 200);
@@ -154,13 +166,20 @@ function App() {
     clearMarkers();
 
     try {
+      // Raw coordinates ("33.7490, -84.3880") work for unaddressed land parcels
+      const coordMatch = address.trim().match(/^(-?\d{1,3}\.\d+)\s*,\s*(-?\d{1,3}\.\d+)$/);
       const geocoder = new google.maps.Geocoder();
-      const geo = await new Promise((res, rej) =>
-        geocoder.geocode({ address }, (r, s) =>
+      const geo = await new Promise((res, rej) => {
+        const query = coordMatch
+          ? { location: { lat: parseFloat(coordMatch[1]), lng: parseFloat(coordMatch[2]) } }
+          : { address };
+        geocoder.geocode(query, (r, s) =>
           s === 'OK' && r.length ? res(r[0]) : rej(new Error('Address not found (' + s + ')'))
-        )
-      );
-      const center = geo.geometry.location;
+        );
+      });
+      const center = coordMatch
+        ? new google.maps.LatLng(parseFloat(coordMatch[1]), parseFloat(coordMatch[2]))
+        : geo.geometry.location;
       setSubject({ address: geo.formatted_address, lat: center.lat(), lng: center.lng() });
 
       const map = mapObj.current;
@@ -312,10 +331,11 @@ function App() {
 
         <div className="flex-1 flex flex-col sm:flex-row gap-2">
           <input
+            ref={addressInputRef}
             value={address}
             onChange={(e) => setAddress(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && analyze()}
-            placeholder="Enter subject property address…"
+            placeholder="Enter address or coordinates (e.g. 33.749, -84.388)…"
             className="flex-1 px-4 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy"
           />
           <select
