@@ -116,30 +116,36 @@ async function placesAutocomplete(input) {
     .filter(Boolean);
 }
 
-// Routes API — real driving distance/time from the subject to each found location.
+// Routes API — real driving distance/time, batched in chunks of 25 destinations.
 async function driveMatrix(lat, lng, places) {
   if (places.length === 0) return;
-  const resp = await fetch('https://routes.googleapis.com/distanceMatrix/v2:computeRouteMatrix', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Goog-Api-Key': GMAPS_KEY,
-      'X-Goog-FieldMask': 'originIndex,destinationIndex,distanceMeters,duration,condition',
-    },
-    body: JSON.stringify({
-      origins: [{ waypoint: { location: { latLng: { latitude: lat, longitude: lng } } } }],
-      destinations: places.map((p) => ({ waypoint: { location: { latLng: { latitude: p.lat, longitude: p.lng } } } })),
-      travelMode: 'DRIVE',
-    }),
-  });
-  if (!resp.ok) return;
-  const rows = await resp.json();
-  rows.forEach((r) => {
-    if (r.condition === 'ROUTE_EXISTS' && places[r.destinationIndex]) {
-      places[r.destinationIndex].driveMi = r.distanceMeters / M_PER_MILE;
-      places[r.destinationIndex].driveMin = Math.round(parseInt(r.duration) / 60);
-    }
-  });
+  const CHUNK = 25;
+  for (let i = 0; i < places.length; i += CHUNK) {
+    const chunk = places.slice(i, i + CHUNK);
+    try {
+      const resp = await fetch('https://routes.googleapis.com/distanceMatrix/v2:computeRouteMatrix', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Goog-Api-Key': GMAPS_KEY,
+          'X-Goog-FieldMask': 'originIndex,destinationIndex,distanceMeters,duration,condition',
+        },
+        body: JSON.stringify({
+          origins: [{ waypoint: { location: { latLng: { latitude: lat, longitude: lng } } } }],
+          destinations: chunk.map((p) => ({ waypoint: { location: { latLng: { latitude: p.lat, longitude: p.lng } } } })),
+          travelMode: 'DRIVE',
+        }),
+      });
+      if (!resp.ok) continue;
+      const rows = await resp.json();
+      rows.forEach((r) => {
+        if (r.condition === 'ROUTE_EXISTS' && chunk[r.destinationIndex]) {
+          chunk[r.destinationIndex].driveMi = r.distanceMeters / M_PER_MILE;
+          chunk[r.destinationIndex].driveMin = Math.round(parseInt(r.duration) / 60);
+        }
+      });
+    } catch (e) { /* fall back to straight-line for this chunk */ }
+  }
 }
 
 function brandColor(brand, allBrands) {
