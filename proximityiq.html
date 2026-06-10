@@ -80,6 +80,42 @@ function matchesBrand(placeName, brand) {
   return (BRAND_ALIASES[b] || []).some((alias) => name.includes(normalize(alias)));
 }
 
+const GMAPS_KEY = 'AIzaSyB0puwiTrUIPbynApnT9wov6-ktyB83zho';
+
+// Places API (New) — text search biased to the subject location.
+// The legacy PlacesService is not available on newer Google Cloud projects.
+async function placesTextSearch(query, lat, lng, radiusM) {
+  const resp = await fetch('https://places.googleapis.com/v1/places:searchText', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Goog-Api-Key': GMAPS_KEY,
+      'X-Goog-FieldMask': 'places.displayName,places.formattedAddress,places.location,places.nationalPhoneNumber',
+    },
+    body: JSON.stringify({
+      textQuery: query,
+      maxResultCount: 20,
+      locationBias: { circle: { center: { latitude: lat, longitude: lng }, radius: Math.min(radiusM, 50000) } },
+    }),
+  });
+  if (!resp.ok) throw new Error('Places search failed (' + resp.status + ')');
+  const data = await resp.json();
+  return data.places || [];
+}
+
+async function placesAutocomplete(input) {
+  const resp = await fetch('https://places.googleapis.com/v1/places:autocomplete', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': GMAPS_KEY },
+    body: JSON.stringify({ input, includedRegionCodes: ['us'] }),
+  });
+  if (!resp.ok) return [];
+  const data = await resp.json();
+  return (data.suggestions || [])
+    .map((s) => s.placePrediction && s.placePrediction.text && s.placePrediction.text.text)
+    .filter(Boolean);
+}
+
 function brandColor(brand, allBrands) {
   const idx = allBrands.indexOf(brand);
   return BRAND_COLORS[(idx >= 0 ? idx : 0) % BRAND_COLORS.length];
@@ -97,9 +133,20 @@ function App() {
   const [status, setStatus] = useState('');
   const [loading, setLoading] = useState(false);
   const [subject, setSubject] = useState(null);
+  const [suggestions, setSuggestions] = useState([]);
+  const suggestTimer = useRef(null);
 
   const mapRef = useRef(null);
   const addressInputRef = useRef(null);
+
+  const onAddressChange = (val) => {
+    setAddress(val);
+    clearTimeout(suggestTimer.current);
+    if (val.trim().length < 4 || /^-?\d/.test(val.trim())) { setSuggestions([]); return; }
+    suggestTimer.current = setTimeout(async () => {
+      setSuggestions(await placesAutocomplete(val));
+    }, 250);
+  };
   const mapObj = useRef(null);
   const markersRef = useRef([]);
   const circleRef = useRef(null);
@@ -118,17 +165,6 @@ function App() {
           streetViewControl: false,
           fullscreenControl: true,
         });
-        // Address autocomplete on the top-bar input
-        if (addressInputRef.current) {
-          const ac = new google.maps.places.Autocomplete(addressInputRef.current, {
-            fields: ['formatted_address', 'geometry'],
-            componentRestrictions: { country: 'us' },
-          });
-          ac.addListener('place_changed', () => {
-            const place = ac.getPlace();
-            if (place && place.formatted_address) setAddress(place.formatted_address);
-          });
-        }
         clearInterval(t);
       }
     }, 200);
@@ -222,32 +258,31 @@ function App() {
       });
 
       setStatus('Searching ' + selected.length + ' brand(s) within ' + radius + ' mi…');
-      const service = new google.maps.places.PlacesService(map);
       const radiusM = Math.round(radius * M_PER_MILE);
 
-      const searches = selected.map((brand) =>
-        new Promise((resolve) => {
-          service.nearbySearch({ location: center, radius: radiusM, keyword: brand }, (places, st) => {
-            const ok = st === google.maps.places.PlacesServiceStatus.OK;
-            const list = (ok ? places : [])
-              .filter((p) => matchesBrand(p.name, brand))
-              .map((p) => {
-                const dist = google.maps.geometry.spherical.computeDistanceBetween(center, p.geometry.location);
-                return {
-                  name: p.name,
-                  vicinity: p.vicinity || '',
-                  distMi: dist / M_PER_MILE,
-                  lat: p.geometry.location.lat(),
-                  lng: p.geometry.location.lng(),
-                  phone: '', // Nearby Search does not return phone; available via Place Details if needed
-                };
-              })
-              .filter((p) => p.distMi <= radius)
-              .sort((a, b) => a.distMi - b.distMi);
-            resolve({ brand, places: list });
-          });
-        })
-      );
+      const searches = selected.map(async (brand) => {
+        let places = [];
+        try {
+          places = await placesTextSearch(brand, center.lat(), center.lng(), radiusM);
+        } catch (e) { /* brand-level failure shouldn't kill the whole run */ }
+        const list = places
+          .filter((p) => p.displayName && matchesBrand(p.displayName.text, brand))
+          .map((p) => {
+            const loc = new google.maps.LatLng(p.location.latitude, p.location.longitude);
+            const dist = google.maps.geometry.spherical.computeDistanceBetween(center, loc);
+            return {
+              name: p.displayName.text,
+              vicinity: p.formattedAddress || '',
+              distMi: dist / M_PER_MILE,
+              lat: p.location.latitude,
+              lng: p.location.longitude,
+              phone: p.nationalPhoneNumber || '',
+            };
+          })
+          .filter((p) => p.distMi <= radius)
+          .sort((a, b) => a.distMi - b.distMi);
+        return { brand, places: list };
+      });
 
       const raw = await Promise.all(searches);
       const final = raw.map((r) => ({ ...r, color: brandColor(r.brand, allBrandList) }));
@@ -330,14 +365,29 @@ function App() {
         </div>
 
         <div className="flex-1 flex flex-col sm:flex-row gap-2">
-          <input
-            ref={addressInputRef}
-            value={address}
-            onChange={(e) => setAddress(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && analyze()}
-            placeholder="Enter address or coordinates (e.g. 33.749, -84.388)…"
-            className="flex-1 px-4 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy"
-          />
+          <div className="flex-1 relative">
+            <input
+              ref={addressInputRef}
+              value={address}
+              onChange={(e) => onAddressChange(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') { setSuggestions([]); analyze(); } }}
+              placeholder="Enter address or coordinates (e.g. 33.749, -84.388)…"
+              className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy"
+            />
+            {suggestions.length > 0 && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 overflow-hidden">
+                {suggestions.map((s, i) => (
+                  <div
+                    key={i}
+                    onClick={() => { setAddress(s); setSuggestions([]); }}
+                    className="px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-0"
+                  >
+                    {s}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
           <select
             value={radius}
             onChange={(e) => setRadius(parseFloat(e.target.value))}
@@ -493,7 +543,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(<App />);
 </script>
 
 <script
-  src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB0puwiTrUIPbynApnT9wov6-ktyB83zho&libraries=places,geometry&callback=Function.prototype"
+  src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB0puwiTrUIPbynApnT9wov6-ktyB83zho&libraries=geometry&callback=Function.prototype"
   async defer>
 </script>
 </body>
