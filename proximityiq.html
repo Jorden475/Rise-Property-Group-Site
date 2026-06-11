@@ -454,10 +454,15 @@ function App() {
 
   const exportCSV = () => {
     if (!results) return;
-    const rows = [['Brand', 'Address', 'Radius Distance (mi)', 'Drive Distance (mi)', 'Drive Time (min)', 'Phone']];
+    const subjectAddr = subject ? subject.address : '';
+    const rows = [
+      ['Subject Property', subjectAddr, '', '', '', '', ''],
+      ['', '', '', '', '', '', ''],
+      ['Brand', 'Location Name', 'Address', 'Drive Distance (mi)', 'Drive Time (min)', 'Phone'],
+    ];
     results.forEach(({ brand, places }) =>
       places.forEach((p) =>
-        rows.push([brand, (p.name + ' — ' + p.vicinity), p.distMi.toFixed(2), p.driveMi != null ? p.driveMi.toFixed(2) : '', p.driveMin ?? '', p.phone || ''])
+        rows.push([brand, p.name, p.vicinity, p.driveMi != null ? p.driveMi.toFixed(2) : p.distMi.toFixed(2), p.driveMin ?? '', p.phone || ''])
       )
     );
     const csv = rows.map((r) => r.map((c) => '"' + String(c).replace(/"/g, '""') + '"').join(',')).join('\n');
