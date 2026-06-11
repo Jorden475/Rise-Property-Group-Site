@@ -174,7 +174,9 @@ function App() {
   const onAddressChange = (val) => {
     setAddress(val);
     clearTimeout(suggestTimer.current);
-    if (val.trim().length < 4 || /^-?\d/.test(val.trim())) { setSuggestions([]); return; }
+    // Skip suggestions only for lat,lng coordinate input — not street numbers
+    const looksLikeCoords = /^-?\d{1,3}\.\d+\s*(,\s*(-?\d{0,3}(\.\d*)?)?)?$/.test(val.trim());
+    if (val.trim().length < 4 || looksLikeCoords) { setSuggestions([]); return; }
     suggestTimer.current = setTimeout(async () => {
       setSuggestions(await placesAutocomplete(val));
     }, 250);
