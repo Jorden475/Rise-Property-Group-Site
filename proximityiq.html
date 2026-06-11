@@ -49,10 +49,27 @@ const PRESET_BRANDS = [
   'Walmart', 'Chase Bank', 'Wells Fargo',
 ];
 
+// High-contrast colors chosen for visibility on Google Maps light basemap.
+// Each is perceptually distinct — no two adjacent entries look similar.
 const BRAND_COLORS = [
-  '#E63946', '#2A9D8F', '#E76F51', '#264653', '#F4A261', '#6A4C93',
-  '#1982C4', '#8AC926', '#FF595E', '#3A86FF', '#FB5607', '#7209B7',
-  '#06A77D', '#D62828', '#003049', '#F77F00', '#5F0F40', '#0F4C5C',
+  '#D62828', // red
+  '#0077B6', // ocean blue
+  '#2DC653', // vivid green
+  '#FF6B00', // deep orange
+  '#7B2FBE', // purple
+  '#00B4D8', // cyan
+  '#FF1493', // hot pink
+  '#1A7A4A', // forest green
+  '#FF9500', // amber
+  '#003F88', // dark navy
+  '#E63995', // magenta
+  '#00796B', // teal
+  '#C77DFF', // lavender
+  '#B5000C', // crimson
+  '#4CAF50', // medium green — only used if 14+ brands selected
+  '#F4A100', // golden yellow
+  '#0A3D62', // deep blue
+  '#E91E63', // pink-red
 ];
 
 const RADII = [0.5, 1, 2, 3, 5];
@@ -149,8 +166,10 @@ async function driveMatrix(lat, lng, places) {
   }
 }
 
-function brandColor(brand, allBrands) {
-  const idx = allBrands.indexOf(brand);
+function brandColor(brand, activeBrands) {
+  // Color assigned by position in the active selection, not the full preset list,
+  // so the first two selected brands always get red and blue (never the same color).
+  const idx = activeBrands.indexOf(brand);
   return BRAND_COLORS[(idx >= 0 ? idx : 0) % BRAND_COLORS.length];
 }
 
@@ -161,6 +180,31 @@ function App() {
   const [selected, setSelected] = useState([]);
   const [customBrands, setCustomBrands] = useState([]);
   const [customInput, setCustomInput] = useState('');
+  const [brandSuggestions, setBrandSuggestions] = useState([]);
+  const brandSuggestTimer = useRef(null);
+
+  const onCustomBrandChange = (val) => {
+    setCustomInput(val);
+    clearTimeout(brandSuggestTimer.current);
+    if (val.trim().length < 2) { setBrandSuggestions([]); return; }
+    brandSuggestTimer.current = setTimeout(async () => {
+      // Use Places text search to suggest real business names matching what's typed
+      try {
+        const resp = await fetch('https://places.googleapis.com/v1/places:autocomplete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': GMAPS_KEY },
+          body: JSON.stringify({ input: val, includedPrimaryTypes: ['restaurant', 'food', 'store', 'establishment'], includedRegionCodes: ['us'] }),
+        });
+        const data = await resp.json();
+        const names = [...new Set(
+          (data.suggestions || [])
+            .map((s) => s.placePrediction?.structuredFormat?.mainText?.text)
+            .filter(Boolean)
+        )].slice(0, 6);
+        setBrandSuggestions(names);
+      } catch (e) { setBrandSuggestions([]); }
+    }, 250);
+  };
   const [filter, setFilter] = useState('');
   const [results, setResults] = useState(null); // [{brand,color,places:[{name,vicinity,distMi,phone,lat,lng}]}]
   const [status, setStatus] = useState('');
@@ -356,7 +400,7 @@ function App() {
     await Promise.all(raw.map((r) => driveMatrix(center.lat(), center.lng(), r.places)));
     raw.forEach((r) => r.places.sort((a, b) => (a.driveMi ?? a.distMi) - (b.driveMi ?? b.distMi)));
 
-    const final = raw.map((r) => ({ ...r, color: brandColor(r.brand, [...PRESET_BRANDS, ...customBrands]) }));
+    const final = raw.map((r) => ({ ...r, color: brandColor(r.brand, brands) }));
 
     const map = mapObj.current;
     final.forEach(({ brand, color, places }) => {
@@ -527,20 +571,36 @@ function App() {
               })}
             </div>
 
-            <div className="flex gap-2">
-              <input
-                value={customInput}
-                onChange={(e) => setCustomInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && addCustom()}
-                placeholder="Add any brand (e.g. Torchy's Tacos)"
-                className="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-gold/40"
-              />
-              <button
-                onClick={addCustom}
-                className="px-4 py-2 rounded-lg bg-gold text-white text-sm font-semibold hover:bg-gold/90 transition"
-              >
-                Add
-              </button>
+            <div className="relative">
+              <div className="flex gap-2">
+                <input
+                  value={customInput}
+                  onChange={(e) => onCustomBrandChange(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') { setBrandSuggestions([]); addCustom(); } }}
+                  onBlur={() => setTimeout(() => setBrandSuggestions([]), 150)}
+                  placeholder="Add any brand (e.g. Torchy's Tacos)"
+                  className="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-gold/40"
+                />
+                <button
+                  onClick={() => { setBrandSuggestions([]); addCustom(); }}
+                  className="px-4 py-2 rounded-lg bg-gold text-white text-sm font-semibold hover:bg-gold/90 transition"
+                >
+                  Add
+                </button>
+              </div>
+              {brandSuggestions.length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 overflow-hidden">
+                  {brandSuggestions.map((s, i) => (
+                    <div
+                      key={i}
+                      onMouseDown={() => { setCustomInput(s); setBrandSuggestions([]); }}
+                      className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-0"
+                    >
+                      {s}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {customBrands.length > 0 && (
