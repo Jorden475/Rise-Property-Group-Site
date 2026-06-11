@@ -226,71 +226,90 @@ function App() {
     if (subjectMarkerRef.current) { subjectMarkerRef.current.setMap(null); subjectMarkerRef.current = null; }
   };
 
+  // Geocode the address, center the map, and drop the gold star + radius ring.
+  // Runs immediately when a suggestion is clicked, and again as step 1 of analyze.
+  const locateSubject = async (addr) => {
+    if (!window.google || !mapObj.current) throw new Error('Map is still loading — try again in a second.');
+    clearMarkers();
+
+    // Raw coordinates ("33.7490, -84.3880") work for unaddressed land parcels
+    const coordMatch = addr.trim().match(/^(-?\d{1,3}\.\d+)\s*,\s*(-?\d{1,3}\.\d+)$/);
+    const geocoder = new google.maps.Geocoder();
+    const geo = await new Promise((res, rej) => {
+      const query = coordMatch
+        ? { location: { lat: parseFloat(coordMatch[1]), lng: parseFloat(coordMatch[2]) } }
+        : { address: addr };
+      geocoder.geocode(query, (r, s) =>
+        s === 'OK' && r.length ? res(r[0]) : rej(new Error('Address not found (' + s + ')'))
+      );
+    });
+    const center = coordMatch
+      ? new google.maps.LatLng(parseFloat(coordMatch[1]), parseFloat(coordMatch[2]))
+      : geo.geometry.location;
+    setSubject({ address: geo.formatted_address, lat: center.lat(), lng: center.lng() });
+
+    const map = mapObj.current;
+    map.setCenter(center);
+    map.setZoom(radius <= 1 ? 14 : radius <= 3 ? 13 : 12);
+
+    // Subject property — gold star
+    const subjectInfo = new google.maps.InfoWindow({
+      content:
+        '<div style="font-family:\'Plus Jakarta Sans\',sans-serif;min-width:220px;">' +
+        '<div style="font-weight:700;color:#1B2A4A;font-size:14px;margin-bottom:4px;">Subject Property</div>' +
+        '<div style="color:#555;font-size:12px;margin-bottom:8px;">' + geo.formatted_address + '</div>' +
+        '<div style="border-top:1px solid #eee;padding-top:8px;font-size:12px;">' +
+        '<span style="color:#888;">Traffic Count:</span> ' +
+        '<span style="color:#C9A84C;font-weight:600;cursor:pointer;" onclick="alert(\'Traffic data integration coming soon.\')">Request traffic data</span>' +
+        '</div></div>',
+    });
+    // NOTE: Traffic count API call goes here.
+    // When ready, replace the "Request traffic data" placeholder above with a call to
+    // StreetLight, TomTom Traffic Stats, HERE, or the Georgia DOT (GDOT) AADT endpoint,
+    // passing { lat: center.lat(), lng: center.lng() } and rendering the returned AADT/VPD value.
+    const star = {
+      path: 'M 0,-12 L 3.5,-3.7 12,-3.7 5,1.5 7.6,10 0,4.9 -7.6,10 -5,1.5 -12,-3.7 -3.5,-3.7 Z',
+      fillColor: '#C9A84C',
+      fillOpacity: 1,
+      strokeColor: '#1B2A4A',
+      strokeWeight: 1.5,
+      scale: 1.4,
+    };
+    subjectMarkerRef.current = new google.maps.Marker({
+      map, position: center, icon: star, zIndex: 1000, title: 'Subject Property',
+    });
+    subjectMarkerRef.current.addListener('click', () => subjectInfo.open(map, subjectMarkerRef.current));
+
+    // Radius ring
+    circleRef.current = new google.maps.Circle({
+      map, center, radius: radius * M_PER_MILE,
+      strokeColor: '#1B2A4A', strokeOpacity: 0.35, strokeWeight: 1.5,
+      fillColor: '#1B2A4A', fillOpacity: 0.04,
+    });
+
+    return center;
+  };
+
+  const previewSubject = async (addr) => {
+    setResults(null);
+    setStatus('');
+    try {
+      await locateSubject(addr);
+    } catch (e) {
+      setStatus('Error: ' + e.message);
+    }
+  };
+
   const analyze = async () => {
     if (!address.trim()) { setStatus('Enter a subject property address.'); return; }
     if (selected.length === 0) { setStatus('Select at least one brand.'); return; }
-    if (!window.google || !mapObj.current) { setStatus('Map is still loading — try again in a second.'); return; }
 
     setLoading(true);
     setStatus('Geocoding address…');
     setResults(null);
-    clearMarkers();
 
     try {
-      // Raw coordinates ("33.7490, -84.3880") work for unaddressed land parcels
-      const coordMatch = address.trim().match(/^(-?\d{1,3}\.\d+)\s*,\s*(-?\d{1,3}\.\d+)$/);
-      const geocoder = new google.maps.Geocoder();
-      const geo = await new Promise((res, rej) => {
-        const query = coordMatch
-          ? { location: { lat: parseFloat(coordMatch[1]), lng: parseFloat(coordMatch[2]) } }
-          : { address };
-        geocoder.geocode(query, (r, s) =>
-          s === 'OK' && r.length ? res(r[0]) : rej(new Error('Address not found (' + s + ')'))
-        );
-      });
-      const center = coordMatch
-        ? new google.maps.LatLng(parseFloat(coordMatch[1]), parseFloat(coordMatch[2]))
-        : geo.geometry.location;
-      setSubject({ address: geo.formatted_address, lat: center.lat(), lng: center.lng() });
-
-      const map = mapObj.current;
-      map.setCenter(center);
-      map.setZoom(radius <= 1 ? 14 : radius <= 3 ? 13 : 12);
-
-      // Subject property — gold star
-      const subjectInfo = new google.maps.InfoWindow({
-        content:
-          '<div style="font-family:\'Plus Jakarta Sans\',sans-serif;min-width:220px;">' +
-          '<div style="font-weight:700;color:#1B2A4A;font-size:14px;margin-bottom:4px;">Subject Property</div>' +
-          '<div style="color:#555;font-size:12px;margin-bottom:8px;">' + geo.formatted_address + '</div>' +
-          '<div style="border-top:1px solid #eee;padding-top:8px;font-size:12px;">' +
-          '<span style="color:#888;">Traffic Count:</span> ' +
-          '<span style="color:#C9A84C;font-weight:600;cursor:pointer;" onclick="alert(\'Traffic data integration coming soon.\')">Request traffic data</span>' +
-          '</div></div>',
-      });
-      // NOTE: Traffic count API call goes here.
-      // When ready, replace the "Request traffic data" placeholder above with a call to
-      // StreetLight, TomTom Traffic Stats, HERE, or the Georgia DOT (GDOT) AADT endpoint,
-      // passing { lat: center.lat(), lng: center.lng() } and rendering the returned AADT/VPD value.
-      const star = {
-        path: 'M 0,-12 L 3.5,-3.7 12,-3.7 5,1.5 7.6,10 0,4.9 -7.6,10 -5,1.5 -12,-3.7 -3.5,-3.7 Z',
-        fillColor: '#C9A84C',
-        fillOpacity: 1,
-        strokeColor: '#1B2A4A',
-        strokeWeight: 1.5,
-        scale: 1.4,
-      };
-      subjectMarkerRef.current = new google.maps.Marker({
-        map, position: center, icon: star, zIndex: 1000, title: 'Subject Property',
-      });
-      subjectMarkerRef.current.addListener('click', () => subjectInfo.open(map, subjectMarkerRef.current));
-
-      // Radius ring
-      circleRef.current = new google.maps.Circle({
-        map, center, radius: radius * M_PER_MILE,
-        strokeColor: '#1B2A4A', strokeOpacity: 0.35, strokeWeight: 1.5,
-        fillColor: '#1B2A4A', fillOpacity: 0.04,
-      });
+      const center = await locateSubject(address);
 
       setStatus('Searching ' + selected.length + ' brand(s) within ' + radius + ' mi…');
       const radiusM = Math.round(radius * M_PER_MILE);
@@ -328,6 +347,7 @@ function App() {
       const final = raw.map((r) => ({ ...r, color: brandColor(r.brand, allBrandList) }));
 
       // Drop pins
+      const map = mapObj.current;
       final.forEach(({ brand, color, places }) => {
         places.forEach((p) => {
           const marker = new google.maps.Marker({
@@ -422,7 +442,7 @@ function App() {
                 {suggestions.map((s, i) => (
                   <div
                     key={i}
-                    onClick={() => { setAddress(s); setSuggestions([]); }}
+                    onClick={() => { setAddress(s); setSuggestions([]); previewSubject(s); }}
                     className="px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-0"
                   >
                     {s}
