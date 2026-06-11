@@ -134,6 +134,7 @@ async function driveMatrix(lat, lng, places) {
           origins: [{ waypoint: { location: { latLng: { latitude: lat, longitude: lng } } } }],
           destinations: chunk.map((p) => ({ waypoint: { location: { latLng: { latitude: p.lat, longitude: p.lng } } } })),
           travelMode: 'DRIVE',
+          routingPreference: 'TRAFFIC_AWARE', // fastest route, matches Google Maps directions
         }),
       });
       if (!resp.ok) continue;
